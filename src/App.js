@@ -1,28 +1,28 @@
 import React, {useEffect, useState} from "react";
-import {Button, Grid, Typography} from "@material-ui/core";
+import {Button, Grid, TextField, Typography} from "@material-ui/core";
 import {InfoDialog} from "./components";
 
 function App() {
 
     const [list, setList] = useState([])
-    const [params, setParams] = useState({field: "", op: "", value: ""})
     const [infoOpen, setInfoOpen] = useState(false)
     const [displayedInfo, setDispInfo] = useState({})
     const [urls, setUrls] = useState([])
+    const [labels, setLabels] = useState([])
 
     useEffect(() => {
-        getAll()
+        search({
+            "field": "context",
+            "value": null,
+            "op": "=="
+        })
     }, [])
 
-    function getAll() {
+    function search(query) {
         const requestOptions = {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                "field": "context",
-                "value": null,
-                "op": "=="
-            })
+            body: JSON.stringify(query)
         };
         fetch('https://stormy-wildwood-04842.herokuapp.com/search', requestOptions)
             .then(async response => {
@@ -50,16 +50,39 @@ function App() {
         };
         fetch('https://stormy-wildwood-04842.herokuapp.com/upload', requestOptions)
             .then(async response => {
-                const data = await response.json();
-                console.log(data)
                 // check for error response
                 if (!response.ok) {
                     // get error message from body or default to response status
-                    const error = (data && data.message) || response.status;
+                    const error = response.status;
                     return Promise.reject(error);
                 }
+                search({
+                    "field": "context",
+                    "value": null,
+                    "op": "=="
+                })
+            })
+            .catch(error => {
+                console.error('There was an error!', error);
+            });
+    }
 
-                setList(data)
+    function del(id, i) {
+        const requestOptions = {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id})
+        };
+        fetch('https://stormy-wildwood-04842.herokuapp.com/delete', requestOptions)
+            .then(async response => {
+                if (!response.ok) {
+                    // get error message from body or default to response status
+                    const error = response.status;
+                    return Promise.reject(error);
+                }
+                const copy = [...list]
+                copy.splice(i, 1)
+                setList(copy)
             })
             .catch(error => {
                 console.error('There was an error!', error);
@@ -89,10 +112,9 @@ function App() {
                 </Grid>
             </Grid>
             <Grid item>
-                {/*todo*/}
-                {/*<Button style={{color: 'red'}}>*/}
-                {/*    Delete*/}
-                {/*</Button>*/}
+                <Button style={{color: 'red'}} onClick={() => {del(item.id, i)}}>
+                    Delete
+                </Button>
             </Grid>
         </Grid>
     }
@@ -135,7 +157,51 @@ function App() {
                 </Typography>
             </Grid>
 
-            <Grid item container direction={"row"}>
+            <Grid item container direction={"row"} alignItems={"center"} justify={"space-between"}>
+                <Grid item xs={3}>
+                    <TextField
+                        label={'search by labels (separated by newline)'}
+                        fullWidth
+                        rows={5}
+                        multiline
+                        onChange={e => {
+                            const u = e.target.value.split('\n')
+                            console.log(u)
+                            setLabels(u)
+                        }}
+                    />
+                </Grid>
+                <Grid item>
+                    <Button onClick={() => {
+                        search({
+                            "field": "labels",
+                            "value": labels,
+                            "op": "array-contains-any"
+                        })
+                    }}>
+                        Search
+                    </Button>
+                </Grid>
+                <Grid item xs={6}>
+                    <TextField
+                        label={'img URLS (separated by newline)'}
+                        fullWidth
+                        multiline
+                        rows={5}
+                        onChange={e => {
+                            const u = e.target.value.split('\n')
+                            console.log(u)
+                            setUrls(u)
+                        }}
+                    />
+                </Grid>
+                <Grid item>
+                    <Button onClick={upload}>
+                        Upload
+                    </Button>
+                </Grid>
+            </Grid>
+            <Grid item>
 
             </Grid>
 
